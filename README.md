@@ -1,370 +1,236 @@
-# 🤖 Google File Search RAG - Sistema di Gestione Documenti e Chatbot# Gestione Documenti - Google RAG File Search API
+# 🤖 Google File Search RAG - Sistema di Gestione Documenti e Chatbot
 
+Sistema completo per la gestione di documenti e chatbot basato su **Google File Search API** e **Gemini AI**. Implementa un sistema RAG (Retrieval-Augmented Generation) per interrogare documenti con intelligenza artificiale.
 
-
-Sistema completo per la gestione di documenti e chatbot basato su **Google File Search API** e **Gemini AI**. Implementa un sistema RAG (Retrieval-Augmented Generation) per interrogare documenti con intelligenza artificiale.Sistema di backend amministrativo per la gestione di documenti utilizzando le **Google Gemini File Search API** (v1beta) per implementare un sistema RAG (Retrieval-Augmented Generation).
-
-
-
-![Python](https://img.shields.io/badge/Python-3.8+-blue)## 🎯 Funzionalità
-
+![Python](https://img.shields.io/badge/Python-3.8+-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.0+-green)
+![Google AI](https://img.shields.io/badge/Google%20AI-Gemini-orange)
 
-![Google AI](https://img.shields.io/badge/Google%20AI-Gemini-orange)- **📤 Upload Documenti**: Carica file nel File Search Store con gestione asincrona (Long-Running Operations)
+## 🎯 Funzionalità
 
+### 🗂️ Gestione Documenti
+
+- **📤 Upload Documenti**: Carica file nel File Search Store con gestione asincrona (Long-Running Operations)
 - **📋 Visualizzazione**: Lista completa dei documenti con stato, dimensione e metadati
-
-## ✨ Caratteristiche- **🔍 Monitoraggio**: Tracking in tempo reale delle operazioni di upload in corso
-
+- **🔍 Monitoraggio**: Tracking in tempo reale delle operazioni di upload in corso
 - **🗑️ Eliminazione**: Rimozione sicura dei documenti con conferma (elimina anche i chunk associati)
+- **⚙️ Metadati Custom**: Supporto per metadati personalizzati durante l'upload
+- **Formati supportati**: PDF, TXT, DOC, DOCX, XLS, XLSX, CSV, JSON, HTML, MD
 
-### 🗂️ Gestione Documenti- **⚙️ Metadati Custom**: Supporto per metadati personalizzati durante l'upload
+### 💬 Chatbot RAG
 
-- ✅ **Upload documenti** (PDF, TXT, DOC, DOCX, XLS, XLSX, CSV, JSON, HTML, MD)
+- **🔍 Retrieval semantico** sui documenti caricati
+- **🤖 Generazione risposte** con Gemini AI
+- **💭 Conversazioni multi-turn** con memoria del contesto
+- **📚 Visualizzazione fonti** dei documenti utilizzati
+- **⚙️ Selezione modello** Gemini configurabile
+- **🔄 Retry automatico** su errori di rate limit
+- **📱 Design responsive** per mobile e desktop
 
-- ✅ **Gestione metadati** personalizzati## 🏗️ Architettura
+## 🏗️ Architettura
 
-- ✅ **Monitoraggio stato** documenti (PROCESSING, ACTIVE, FAILED)
+```
+User Query → Retrieval (File Search API) → Generation (Gemini) → Response
+             ↓ Semantic Search              ↓ Context + Prompt
+             Relevant Chunks                 AI-Generated Answer
+```
 
-- ✅ **Eliminazione documenti** con conferma```
+### Struttura Progetto
 
-- ✅ **Visualizzazione dettagli** completiGestione Documenti GoogleSearch/
-
+```
+GoogleFileSearch/
 ├── backend/
-
-### 💬 Chatbot RAG│   └── app.py              # Server Flask con API endpoints
-
-- ✅ **Retrieval semantico** sui documenti caricati├── frontend/
-
-- ✅ **Generazione risposte** con Gemini AI│   ├── templates/
-
-- ✅ **Conversazioni multi-turn** con memoria del contesto│   │   └── index.html      # Interfaccia amministrativa
-
-- ✅ **Visualizzazione fonti** dei documenti utilizzati│   └── static/
-
-- ✅ **Selezione modello** Gemini configurabile│       ├── css/
-
-- ✅ **Retry automatico** su errori di rate limit│       │   └── styles.css  # Stili personalizzati
-
-- ✅ **Design responsive** per mobile e desktop│       └── js/
-
-│           └── app.js      # Logica frontend e gestione API
-
-## 🚀 Installazione Rapida├── .env                     # Configurazione (da creare)
-
-├── .env.example            # Template configurazione
-
-```bash├── requirements.txt        # Dipendenze Python
-
-# 1. Clona il repository└── README.md              # Questa documentazione
-
-git clone https://github.com/Attilio81/GoogleFileSearch.git```
-
-cd GoogleFileSearch
+│   ├── app.py                    # Flask app principale
+│   ├── create_store.py           # Crea File Search Store
+│   └── test_*.py                 # Script di test
+├── frontend/
+│   ├── static/
+│   │   ├── css/
+│   │   │   ├── styles.css        # Stili admin
+│   │   │   └── chat.css          # Stili chatbot
+│   │   └── js/
+│   │       ├── app.js            # Logic admin
+│   │       └── chat.js           # Logic chatbot
+│   └── templates/
+│       ├── index.html            # Admin UI
+│       └── chat.html             # Chat UI
+├── .env                          # Config (da creare)
+├── .env.example                  # Template configurazione
+├── requirements.txt              # Dipendenze Python
+└── README.md                     # Questa documentazione
+```
 
 ## 🚀 Setup e Installazione
 
-# 2. Crea virtual environment
+### 1. Prerequisiti
 
-python -m venv venv### 1. Prerequisiti
-
-venv\Scripts\activate  # Windows
-
-# source venv/bin/activate  # Linux/Mac- Python 3.8 o superiore
-
+- Python 3.8 o superiore
 - Account Google Cloud con accesso alle Gemini API
+- API Key di Google Gemini ([Ottienila qui](https://makersuite.google.com/app/apikey))
+- File Search Store già creato
 
-# 3. Installa dipendenze- API Key di Google Gemini
+### 2. Clona il Repository
 
-pip install -r requirements.txt- File Search Store già creato
-
-
-
-# 4. Configura .env### 2. Clona/Scarica il Progetto
-
-echo GEMINI_API_KEY=your_api_key_here > .env
-
-echo FILE_SEARCH_STORE_NAME=fileSearchStores/your-store-name >> .env```bash
-
-cd "c:\Progetti Pilota\Gestione Documenti GoogleSearch"
-
-# 5. Avvia il server```
-
-cd backend
-
-python app.py### 3. Crea Ambiente Virtuale
-
+```bash
+git clone https://github.com/Attilio81/GoogleFileSearch.git
+cd GoogleFileSearch
 ```
 
-```powershell
+### 3. Crea Ambiente Virtuale
 
-Accedi a:python -m venv venv
+```bash
+python -m venv venv
 
-- **Admin Panel:** http://localhost:5000.\venv\Scripts\Activate.ps1
+# Windows
+venv\Scripts\activate
 
-- **Chatbot:** http://localhost:5000/chat```
+# Linux/Mac
+source venv/bin/activate
+```
 
+### 4. Installa Dipendenze
 
+```bash
+pip install -r requirements.txt
+```
 
-## 📋 Requisiti### 4. Installa Dipendenze
+### 5. Configura Variabili d'Ambiente
 
+Crea un file `.env` copiando `.env.example`:
 
+```bash
+cp .env.example .env
+```
 
-- **Python 3.8+**```powershell
+Modifica `.env` con i tuoi dati:
 
-- **Chiave API Google AI Studio** ([Ottienila qui](https://aistudio.google.com/apikey))pip install -r requirements.txt
+```env
+GEMINI_API_KEY=la_tua_api_key
+FILE_SEARCH_STORE_NAME=fileSearchStores/il-tuo-store-id
+```
 
-- **File Search Store** ([Crealo con `backend/create_store.py`](backend/create_store.py))```
+#### Come ottenere l'API Key:
 
+1. Vai su https://makersuite.google.com/app/apikey
+2. Crea un nuovo progetto o seleziona uno esistente
+3. Genera una nuova API Key
+4. Copia la chiave nel file `.env`
 
+#### Come creare un File Search Store:
 
-## 🏗️ Architettura RAG### 5. Configura Variabili d'Ambiente
+Puoi creare un File Search Store tramite API REST:
 
-
-
-```Crea un file `.env` copiando `.env.example`:
-
-User Query → Retrieval (File Search API) → Generation (Gemini) → Response
-
-             ↓ Semantic Search              ↓ Context + Prompt```powershell
-
-             Relevant Chunks                 AI-Generated AnswerCopy-Item .env.example .env
-
-``````
-
-
-
-## 📁 Struttura ProgettoModifica `.env` con i tuoi dati:
-
-
-
-``````env
-
-GoogleFileSearch/GEMINI_API_KEY=la_tua_api_key
-
-├── backend/FILE_SEARCH_STORE_NAME=fileSearchStores/il-tuo-store-id
-
-│   ├── app.py                    # Flask app principale```
-
-│   ├── create_store.py           # Crea File Search Store
-
-│   └── test_*.py                 # Script di test#### Come ottenere l'API Key:
-
-├── frontend/
-
-│   ├── static/1. Vai su https://makersuite.google.com/app/apikey
-
-│   │   ├── css/2. Crea un nuovo progetto o seleziona uno esistente
-
-│   │   │   ├── styles.css       # Stili admin3. Genera una nuova API Key
-
-│   │   │   └── chat.css         # Stili chatbot4. Copia la chiave nel file `.env`
-
-│   │   └── js/
-
-│   │       ├── app.js           # Logic admin#### Come creare un File Search Store:
-
-│   │       └── chat.js          # Logic chatbot
-
-│   └── templates/Puoi creare un File Search Store tramite API REST:
-
-│       ├── index.html           # Admin UI
-
-│       └── chat.html            # Chat UI```bash
-
-├── .env                         # Config (da creare)curl -X POST "https://generativelanguage.googleapis.com/v1beta/fileSearchStores" \
-
-├── requirements.txt             # Dipendenze  -H "x-goog-api-key: YOUR_API_KEY" \
-
-└── README.md                    # Questa guida  -H "Content-Type: application/json" \
-
-```  -d '{
-
+```bash
+curl -X POST "https://generativelanguage.googleapis.com/v1beta/fileSearchStores" \
+  -H "x-goog-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
     "displayName": "My RAG Store"
-
-## 🔌 API Endpoints Principali  }'
-
+  }'
 ```
 
-### Gestione Documenti
+La risposta conterrà il nome della risorsa (es: `fileSearchStores/abc123`) da usare in `.env`.
 
-- `GET /api/documents` - Lista documentiLa risposta conterrà il nome della risorsa (es: `fileSearchStores/abc123`) da usare in `.env`.
+### 6. Avvia il Server
 
-- `POST /api/documents/upload` - Upload documento
+```bash
+cd backend
+python app.py
+```
 
-- `DELETE /api/documents/{name}` - Elimina documento### 6. Avvia il Server
+Il server sarà disponibile su: **http://localhost:5000**
 
-- `GET /api/operations/{name}` - Stato operazione
+### 7. Accedi all'Interfaccia
 
-```powershell
+- **Admin Panel:** http://localhost:5000
+- **Chatbot:** http://localhost:5000/chat
 
-### Chatbot RAGcd backend
+## 📖 Utilizzo
 
-- `POST /api/chat/query` - Retrieval (cerca chunk rilevanti)python app.py
+### Caricamento Documenti
 
-- `POST /api/chat/generate` - Generation (genera risposta)```
-
-
-
-### InterfacceIl server sarà disponibile su: http://localhost:5000
-
-- `GET /` - Admin panel
-
-- `GET /chat` - Chatbot interface### 7. Accedi all'Interfaccia
-
-
-
-## 🎯 Come Usare il ChatbotApri il browser e vai su: http://localhost:5000
-
-
-
-1. **Carica documenti** tramite Admin Panel (http://localhost:5000)## 📖 Utilizzo
-
-2. **Accedi al chatbot** (http://localhost:5000/chat)
-
-3. **Fai una domanda** - Il sistema:### Caricamento Documenti
-
-   - Cerca nei documenti i passaggi rilevanti (Retrieval)
-
-   - Genera una risposta contestualizzata (Generation)1. Clicca su "Seleziona File" e scegli il documento
-
-   - Mostra le fonti utilizzate2. (Opzionale) Specifica un nome visualizzazione custom
-
+1. Clicca su "Seleziona File" e scegli il documento
+2. (Opzionale) Specifica un nome visualizzazione custom
 3. (Opzionale) Aggiungi metadati personalizzati
-
-### Modelli Gemini Supportati4. Clicca "Carica Documento"
-
+4. Clicca "Carica Documento"
 5. L'operazione verrà tracciata nella sezione "Operazioni in Corso"
 
-| Modello | Velocità | Rate Limit | Consigliato |
+### Monitoraggio Stato
 
-|---------|----------|------------|-------------|### Monitoraggio Stato
-
-| `gemini-2.5-flash-lite` | Veloce | Alto | ✅ Default |
-
-| `gemini-1.5-flash-latest` | Veloce | Alto | ✅ Alternativa |- La tabella mostra tutti i documenti con il loro stato:
-
-| `gemini-1.5-pro-latest` | Medio | Medio | Per query complesse |  - **✅ Attivo**: Documento pronto per la ricerca
-
-| `gemini-2.0-flash-exp` | Variabile | Basso | ⚠️ Solo test |  - **⏳ In elaborazione**: Upload completato, elaborazione embedding in corso
-
-  - **❌ Fallito**: Errore durante l'elaborazione
-
-## 🔧 Troubleshooting
+La tabella mostra tutti i documenti con il loro stato:
+- **✅ Attivo**: Documento pronto per la ricerca
+- **⏳ In elaborazione**: Upload completato, elaborazione embedding in corso
+- **❌ Fallito**: Errore durante l'elaborazione
 
 ### Eliminazione Documenti
 
-### Errore 429 (Rate Limit)
-
-**Soluzione:** Cambia modello a `gemini-2.5-flash-lite` nelle impostazioni del chatbot1. Clicca sul pulsante "🗑️ Elimina" nella riga del documento
-
+1. Clicca sul pulsante "🗑️ Elimina" nella riga del documento
 2. Conferma l'eliminazione nel modal
+3. Il documento e tutti i chunk associati verranno eliminati
 
-### Errore 404 sul modello3. Il documento e tutti i chunk associati verranno eliminati
+### Utilizzo Chatbot
 
+1. Carica documenti tramite Admin Panel
+2. Accedi al chatbot (http://localhost:5000/chat)
+3. Fai una domanda - Il sistema:
+   - Cerca nei documenti i passaggi rilevanti (Retrieval)
+   - Genera una risposta contestualizzata (Generation)
+   - Mostra le fonti utilizzate
+
+## 🔌 API Endpoints
+
+### Configurazione
+
+- `GET /api/config` - Restituisce la configurazione corrente (senza API key)
+
+### Gestione Documenti
+
+- `GET /api/documents` - Lista documenti con paginazione
+- `POST /api/documents/upload` - Upload documento (Long-Running Operation)
+- `DELETE /api/documents/{name}` - Elimina documento
+- `GET /api/operations/{name}` - Stato operazione di upload
+
+### Chatbot RAG
+
+- `POST /api/chat/query` - Retrieval (cerca chunk rilevanti)
+- `POST /api/chat/generate` - Generation (genera risposta)
+
+### Interfacce
+
+- `GET /` - Admin panel
+- `GET /chat` - Chatbot interface
+
+## 🤖 Modelli Gemini Supportati
+
+| Modello | Velocità | Rate Limit | Consigliato |
+|---------|----------|------------|-------------|
+| `gemini-2.5-flash-lite` | Veloce | Alto | ✅ Default |
+| `gemini-1.5-flash-latest` | Veloce | Alto | ✅ Alternativa |
+| `gemini-1.5-pro-latest` | Medio | Medio | Per query complesse |
+| `gemini-2.0-flash-exp` | Variabile | Basso | ⚠️ Solo test |
+
+## 🔧 Troubleshooting
+
+### Errore 429 (Rate Limit)
+**Soluzione:** Cambia modello a `gemini-2.5-flash-lite` nelle impostazioni del chatbot
+
+### Errore 404 sul modello
 **Soluzione:** Usa solo modelli supportati (vedi tabella sopra)
 
-## 🔧 API Endpoints
-
 ### Documento in PROCESSING
-
-**Soluzione:** Attendi qualche minuto, l'elaborazione richiede tempo### GET /api/config
-
-Restituisce la configurazione corrente (senza API key)
+**Soluzione:** Attendi qualche minuto, l'elaborazione richiede tempo
 
 ### Server non parte
+**Soluzione:** Verifica `.env` con `GEMINI_API_KEY` e `FILE_SEARCH_STORE_NAME`
 
-**Soluzione:** Verifica `.env` con `GEMINI_API_KEY` e `FILE_SEARCH_STORE_NAME`### GET /api/documents
+### Errore 500 su /api/documents
+- **Causa**: Store name non valido o store inesistente
+- **Soluzione**: Esegui `python backend/create_store.py` e aggiorna `.env`
 
-Elenca tutti i documenti nel File Search Store
-
-## 📚 Documentazione Completa
-
-**Query Parameters:**
-
-Per la documentazione dettagliata di API, configurazione e troubleshooting, consulta:- `pageSize`: Numero di risultati per pagina (default: 100)
-
-- [Documentazione Google File Search](https://ai.google.dev/api/file-search)- `pageToken`: Token per paginazione
-
-- [Documentazione Gemini API](https://ai.google.dev/docs)
-
-**Response:**
-
-## 👨‍💻 Autore```json
-
-{
-
-**Attilio**    "success": true,
-
-GitHub: [@Attilio81](https://github.com/Attilio81)    "documents": [
-
-Repository: [GoogleFileSearch](https://github.com/Attilio81/GoogleFileSearch)    {
-
-      "name": "fileSearchStores/xxx/documents/yyy",
-
-## 📄 Licenza      "displayName": "Nome documento",
-
-      "sizeBytes": 12345,
-
-MIT License - Vedi [LICENSE](LICENSE) per dettagli      "createTime": "2024-01-01T12:00:00Z",
-
-      "state": "STATE_ACTIVE"
-
----    }
-
-  ],
-
-**Made with ❤️ using Google AI and Flask**  "nextPageToken": "..."
-
-}
-```
-
-### POST /api/documents/upload
-Carica un nuovo documento (Long-Running Operation)
-
-**Body (multipart/form-data):**
-- `file`: File da caricare (required)
-- `displayName`: Nome visualizzazione (optional)
-- `mimeType`: Tipo MIME (optional, auto-detect)
-- `metadataKeys[]`: Array di chiavi metadati (optional)
-- `metadataValues[]`: Array di valori metadati (optional)
-
-**Response:**
-```json
-{
-  "success": true,
-  "operationName": "fileSearchStores/.../upload/operations/...",
-  "operation": { ... },
-  "message": "Upload avviato con successo"
-}
-```
-
-### GET /api/operations/{operation_name}
-Controlla lo stato di un'operazione di upload
-
-**Response:**
-```json
-{
-  "success": true,
-  "done": true,
-  "operation": { ... },
-  "document": { ... }
-}
-```
-
-### DELETE /api/documents/{document_name}
-Elimina un documento e tutti i chunk associati
-
-**Query Parameters:**
-- `force=true` (automatico): Elimina anche i chunk
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Documento eliminato con successo"
-}
-```
+### Operazione bloccata su STATE_PENDING
+- Normale per file grandi (può richiedere minuti)
+- Controlla i log del server per errori
+- Verifica lo stato tramite API Google direttamente
 
 ## 🔍 Dettagli Tecnici
 
@@ -401,52 +267,27 @@ L'upload dei documenti è asincrono:
 5. Valida e sanitizza tutti gli input
 6. Usa CORS in modo restrittivo
 
-## 🐛 Debugging e Troubleshooting
+## 🐛 Script di Utility
 
-### Attiva logging dettagliato
+### Test Connessione API
 
-Il server Flask registra automaticamente:
-- Tutte le richieste API
-- Errori e eccezioni
-- Stati delle operazioni
-
-I log vengono stampati nella console del server.
-
-### Script di Utility
-
-**Test Connessione API:**
-```powershell
+```bash
 cd backend
 python test_api.py
 ```
 
-**Crea Nuovo File Search Store:**
-```powershell
+### Crea Nuovo File Search Store
+
+```bash
 cd backend
 python create_store.py
 ```
 
-**Verifica Setup:**
-```powershell
+### Verifica Setup
+
+```bash
 python setup.py
 ```
-
-### Problemi Comuni
-
-**❌ Errore 500 su /api/documents**
-- **Causa**: Store name non valido o store inesistente
-- **Soluzione**: Esegui `python backend/create_store.py` e aggiorna `.env`
-
-**❌ Errore: GEMINI_API_KEY non configurata**
-- Verifica che il file `.env` esista
-- Controlla che la chiave API sia corretta
-
-**⏳ Operazione bloccata su STATE_PENDING**
-- Normale per file grandi (può richiedere minuti)
-- Controlla i log del server per errori
-- Verifica lo stato tramite API Google direttamente
-
-**📋 Guida completa:** Vedi [TROUBLESHOOTING.md](TROUBLESHOOTING.md) per tutti i problemi e soluzioni
 
 ## 📚 Risorse
 
@@ -454,14 +295,16 @@ python setup.py
 - [File Search API Reference](https://ai.google.dev/api/rest/v1beta/fileSearchStores)
 - [Flask Documentation](https://flask.palletsprojects.com/)
 
-## 📝 License
+## 👨‍💻 Autore
 
-Questo progetto è fornito "as-is" per scopi educativi e di sviluppo.
+**Attilio**
+- GitHub: [@Attilio81](https://github.com/Attilio81)
+- Repository: [GoogleFileSearch](https://github.com/Attilio81/GoogleFileSearch)
 
-## 🤝 Contributi
+## 📄 Licenza
 
-Per miglioramenti o bug report, crea un issue o pull request.
+MIT License - Vedi [LICENSE](LICENSE) per dettagli
 
 ---
 
-**Sviluppato con ❤️ per la gestione intelligente di documenti RAG**
+**Made with ❤️ using Google AI and Flask**

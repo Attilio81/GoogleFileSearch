@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot RAG - Documenti Google Search</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-content">
+                <h1>💬 Chatbot RAG</h1>
+                <p class="subtitle">Interroga i tuoi documenti con intelligenza artificiale</p>
+            </div>
+            <div class="header-actions">
+                <button id="clear-chat-btn" class="btn-icon" title="Cancella conversazione">
+                    🗑️
+                </button>
+                <a href="/" class="btn-icon" title="Vai all'amministrazione">
+                    ⚙️
+                </a>
+            </div>
+        </header>
+
+        <!-- Info Bar -->
+        <div class="info-bar">
+            <div class="info-item">
+                <span class="label">Documenti attivi:</span>
+                <span id="active-docs-count" class="value">-</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Modello:</span>
+                <span id="model-name" class="value">Gemini 2.5 Flash Lite</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Stato:</span>
+                <span id="connection-status" class="value status-indicator">🟢 Connesso</span>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="messages-container" id="messages-container">
+            <div class="welcome-message">
+                <div class="welcome-icon">🤖</div>
+                <h2>Benvenuto nel Chatbot RAG!</h2>
+                <p>Sono qui per aiutarti a trovare informazioni nei tuoi documenti.</p>
+                <p class="welcome-hint">Fai una domanda per iniziare...</p>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-container">
+            <form id="chat-form">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="user-input" 
+                        placeholder="Scrivi la tua domanda qui..."
+                        rows="1"
+                        maxlength="2000"
+                    ></textarea>
+                    <button type="submit" id="send-btn" class="btn-send" title="Invia messaggio">
+                        <span class="send-icon">➤</span>
+                        <span class="loader" style="display: none;">⏳</span>
+                    </button>
+                </div>
+                <div class="input-info">
+                    <span id="char-count">0/2000</span>
+                    <span class="tip">💡 Premi Shift+Invio per andare a capo</span>
+                </div>
+            </form>
+        </div>
+
+        <!-- Settings Panel (collapsible) -->
+        <div class="settings-panel" id="settings-panel">
+            <button class="settings-toggle" id="settings-toggle">
+                ⚙️ Impostazioni Avanzate
+            </button>
+            <div class="settings-content" id="settings-content" style="display: none;">
+                <div class="setting-group">
+                    <label for="model-select">Modello Gemini:</label>
+                    <select id="model-select">
+                        <option value="gemini-2.5-flash-lite" selected>Gemini 2.5 Flash Lite (Consigliato)</option>
+                        <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash Latest</option>
+                        <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro Latest</option>
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="results-count">Numero di chunk da recuperare:</label>
+                    <input type="number" id="results-count" min="1" max="100" value="10">
+                </div>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="show-sources" checked>
+                        Mostra fonti nei messaggi
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>

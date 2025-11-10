@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Documenti - Google RAG File Search</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>🗂️ Gestione Documenti RAG</h1>
+                <p class="subtitle">Sistema di amministrazione per Google File Search API</p>
+                <div id="config-info" class="config-info"></div>
+            </div>
+            <div class="header-actions">
+                <a href="/chat" class="btn-chat" title="Apri Chatbot">
+                    💬 Apri Chatbot
+                </a>
+            </div>
+        </header>
+
+        <!-- Sezione Upload -->
+        <section class="card">
+            <h2>📤 Carica Nuovo Documento</h2>
+            <form id="upload-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="file-input">Seleziona File *</label>
+                    <input type="file" id="file-input" name="file" required>
+                    <small>Dimensione massima: 100MB</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="display-name">Nome Visualizzazione</label>
+                    <input type="text" id="display-name" name="displayName" 
+                           placeholder="Lascia vuoto per usare il nome del file" maxlength="512">
+                    <small>Max 512 caratteri</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="mime-type">MIME Type (opzionale)</label>
+                    <input type="text" id="mime-type" name="mimeType" 
+                           placeholder="Es: application/pdf, text/plain">
+                    <small>Se vuoto, verrà inferito automaticamente</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Metadati Custom (opzionale)</label>
+                    <div id="metadata-container">
+                        <div class="metadata-row">
+                            <input type="text" name="metadataKeys[]" placeholder="Chiave" class="metadata-key">
+                            <input type="text" name="metadataValues[]" placeholder="Valore" class="metadata-value">
+                            <button type="button" class="btn-small btn-add" onclick="addMetadataRow()">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="upload-btn">
+                    <span class="btn-text">Carica Documento</span>
+                    <span class="loader" style="display: none;"></span>
+                </button>
+            </form>
+
+            <div id="upload-status" class="status-message" style="display: none;"></div>
+        </section>
+
+        <!-- Sezione Monitoraggio Operazioni -->
+        <section class="card" id="operations-section" style="display: none;">
+            <h2>⏳ Operazioni in Corso</h2>
+            <div id="operations-list"></div>
+        </section>
+
+        <!-- Sezione Lista Documenti -->
+        <section class="card">
+            <div class="section-header">
+                <h2>📋 Documenti Attivi</h2>
+                <button class="btn btn-secondary" onclick="refreshDocuments()">
+                    <span id="refresh-icon">🔄</span> Aggiorna
+                </button>
+            </div>
+            
+            <div id="documents-status" class="info-message">
+                Caricamento documenti in corso...
+            </div>
+
+            <div id="documents-container">
+                <table id="documents-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Nome</th>
+                            <th style="width: 25%;">Display Name</th>
+                            <th style="width: 10%;">Dimensione</th>
+                            <th style="width: 12%;">Stato</th>
+                            <th style="width: 18%;">Data Creazione</th>
+                            <th style="width: 10%;">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="documents-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal per conferma eliminazione -->
+    <div id="delete-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>⚠️ Conferma Eliminazione</h3>
+            <p>Sei sicuro di voler eliminare questo documento?</p>
+            <p><strong id="delete-doc-name"></strong></p>
+            <p class="warning-text">Questa operazione eliminerà anche tutti i chunk associati e non può essere annullata.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Annulla</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Elimina</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

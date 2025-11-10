@@ -25,7 +25,16 @@ Sistema completo per la gestione di documenti e chatbot basato su **Google File 
 - **📚 Visualizzazione fonti** dei documenti utilizzati
 - **⚙️ Selezione modello** Gemini configurabile
 - **🔄 Retry automatico** su errori di rate limit
+- **💾 Persistenza cronologia** con salvataggio automatico in localStorage
 - **📱 Design responsive** per mobile e desktop
+
+### 📦 Visualizzatore Chunks
+
+- **🔬 Analisi chunks**: Visualizza come i documenti vengono suddivisi in chunks
+- **🔍 Query semantica**: Cerca chunks specifici usando parole chiave
+- **➕ Espandi/Riduci**: Naviga facilmente tra i chunks
+- **🔦 Evidenziazione testo**: Ricerca full-text all'interno dei chunks
+- **📊 Statistiche**: Visualizza informazioni su numero e dimensione dei chunks
 
 ## 🏗️ Architettura
 
@@ -42,21 +51,26 @@ GoogleFileSearch/
 ├── backend/
 │   ├── app.py                    # Flask app principale
 │   ├── create_store.py           # Crea File Search Store
-│   └── test_*.py                 # Script di test
+│   ├── test_api.py               # Test connessione API
+│   └── test_chunks.py            # Test visualizzazione chunks
 ├── frontend/
 │   ├── static/
 │   │   ├── css/
 │   │   │   ├── styles.css        # Stili admin
-│   │   │   └── chat.css          # Stili chatbot
+│   │   │   ├── chat.css          # Stili chatbot
+│   │   │   └── chunks.css        # Stili visualizzatore chunks
 │   │   └── js/
 │   │       ├── app.js            # Logic admin
-│   │       └── chat.js           # Logic chatbot
+│   │       ├── chat.js           # Logic chatbot
+│   │       └── chunks.js         # Logic visualizzatore chunks
 │   └── templates/
 │       ├── index.html            # Admin UI
-│       └── chat.html             # Chat UI
+│       ├── chat.html             # Chat UI
+│       └── chunks.html           # Visualizzatore chunks
 ├── .env                          # Config (da creare)
 ├── .env.example                  # Template configurazione
 ├── requirements.txt              # Dipendenze Python
+├── IMPROVEMENTS_LOG.md           # Log miglioramenti produzione
 └── README.md                     # Questa documentazione
 ```
 
@@ -144,6 +158,7 @@ Il server sarà disponibile su: **http://localhost:5000**
 
 - **Admin Panel:** http://localhost:5000
 - **Chatbot:** http://localhost:5000/chat
+- **Visualizzatore Chunks:** http://localhost:5000/chunks
 
 ## 📖 Utilizzo
 
@@ -176,6 +191,18 @@ La tabella mostra tutti i documenti con il loro stato:
    - Cerca nei documenti i passaggi rilevanti (Retrieval)
    - Genera una risposta contestualizzata (Generation)
    - Mostra le fonti utilizzate
+4. La cronologia viene salvata automaticamente e ripristinata al refresh
+
+### Visualizzazione Chunks
+
+1. Accedi al visualizzatore chunks (http://localhost:5000/chunks)
+2. Seleziona un documento dalla lista a tendina
+3. (Opzionale) Inserisci una query di ricerca o lascia vuoto per vedere tutti i chunks
+4. Clicca "🔍 Carica Chunks"
+5. Utilizza i controlli per:
+   - **Espandi/Riduci tutto**: Visualizza o nascondi tutti i chunks contemporaneamente
+   - **Ricerca testo**: Cerca all'interno del contenuto dei chunks (evidenziazione in tempo reale)
+   - **Statistiche**: Visualizza informazioni sul documento e i suoi chunks
 
 ## 🔌 API Endpoints
 
@@ -189,16 +216,19 @@ La tabella mostra tutti i documenti con il loro stato:
 - `POST /api/documents/upload` - Upload documento (Long-Running Operation)
 - `DELETE /api/documents/{name}` - Elimina documento
 - `GET /api/operations/{name}` - Stato operazione di upload
+- `POST /api/documents/{name}/chunks` - Recupera chunks con query semantica
 
 ### Chatbot RAG
 
 - `POST /api/chat/query` - Retrieval (cerca chunk rilevanti)
 - `POST /api/chat/generate` - Generation (genera risposta)
+- `POST /api/chat/generate-stream` - Generation con streaming SSE (disponibile ma non integrato in UI)
 
 ### Interfacce
 
 - `GET /` - Admin panel
 - `GET /chat` - Chatbot interface
+- `GET /chunks` - Visualizzatore chunks documenti
 
 ## 🤖 Modelli Gemini Supportati
 
@@ -231,6 +261,76 @@ La tabella mostra tutti i documenti con il loro stato:
 - Normale per file grandi (può richiedere minuti)
 - Controlla i log del server per errori
 - Verifica lo stato tramite API Google direttamente
+
+## ⚙️ Funzionalità Avanzate
+
+### 🛡️ Circuit Breaker per Rate Limits
+
+Il sistema implementa un **Circuit Breaker** intelligente per gestire i rate limits dell'API Gemini:
+
+- **Stati**: CLOSED (normale), OPEN (blocco dopo fallimenti), HALF_OPEN (test ripristino)
+- **Threshold**: 5 fallimenti consecutivi → apertura circuito
+- **Timeout**: 60 secondi di attesa prima di riprovare
+- **Reset automatico**: Su successo, il circuito si chiude
+- **Risposta**: HTTP 503 quando il circuito è aperto
+
+### 🔒 Input Validation e Sicurezza
+
+Protezione completa contro attacchi comuni:
+
+**Validazione Query:**
+- Lunghezza massima: 2000 caratteri
+- Rilevamento pattern XSS: `<script>`, `javascript:`, `onerror=`
+- Blocco SQL injection: `'; DROP`, `' OR '1'='1`
+
+**Validazione MIME Type:**
+- Whitelist rigorosa di tipi consentiti
+- Supporto: PDF, DOC, DOCX, TXT, RTF, XLS, XLSX, CSV, PPT, PPTX, JSON, XML, HTML
+
+**Validazione Metadati:**
+- Massimo 50 coppie chiave-valore
+- Lunghezza chiavi: max 100 caratteri
+- Lunghezza valori: max 500 caratteri
+- Protezione da injection nei metadati
+
+### 💾 File Storage Ottimizzato
+
+Gestione robusta dei file upload:
+
+- **Storage su disco**: Uso di directory temporanea del sistema operativo
+- **Nessun limite memoria**: File non caricati in RAM
+- **Cleanup garantito**: Rimozione automatica file temporanei con `finally` block
+- **Gestione errori**: Log dettagliato di tutte le operazioni
+
+### 📡 Streaming Responses (Disponibile)
+
+Endpoint per risposte in tempo reale:
+
+- **Endpoint**: `/api/chat/generate-stream`
+- **Protocollo**: Server-Sent Events (SSE)
+- **MIME Type**: `text/event-stream`
+- **Validazione**: Identica all'endpoint standard
+- **Circuit Breaker**: Completamente integrato
+- **Stato**: Backend pronto, frontend da integrare
+
+### 📄 Pagination
+
+Navigazione efficiente tra documenti:
+
+- **Page Size**: Default 20, massimo 100 documenti per pagina
+- **Page Token**: Gestione automatica della paginazione
+- **UI**: Controlli "Pagina Successiva" con visibilità intelligente
+- **Performance**: Caricamento progressivo per grandi archivi
+
+### 💭 Chat History Persistence
+
+Salvataggio automatico delle conversazioni:
+
+- **Storage**: localStorage del browser
+- **Limite**: Ultimi 20 messaggi (10 interazioni)
+- **Session ID**: Univoco per futura gestione multi-sessione
+- **Auto-restore**: Ripristino cronologia al caricamento pagina
+- **Controlli**: Pulsante "Cancella Cronologia" con conferma
 
 ## 🔍 Dettagli Tecnici
 
@@ -276,6 +376,21 @@ cd backend
 python test_api.py
 ```
 
+### Visualizza Chunks da CLI
+
+Strumento interattivo per esplorare chunks dei documenti:
+
+```bash
+cd backend
+python test_chunks.py
+```
+
+Lo script ti permette di:
+- Selezionare un documento dalla lista
+- Visualizzare tutti i chunks con statistiche
+- Vedere il contenuto di ogni chunk
+- Salvare i dati completi in formato JSON
+
 ### Crea Nuovo File Search Store
 
 ```bash
@@ -294,6 +409,7 @@ python setup.py
 - [Google Gemini API Documentation](https://ai.google.dev/docs)
 - [File Search API Reference](https://ai.google.dev/api/rest/v1beta/fileSearchStores)
 - [Flask Documentation](https://flask.palletsprojects.com/)
+- [IMPROVEMENTS_LOG.md](IMPROVEMENTS_LOG.md) - Documentazione dettagliata dei miglioramenti production-ready
 
 ## 👨‍💻 Autore
 

@@ -33,6 +33,9 @@ FILE_SEARCH_STORE_NAME = os.getenv('FILE_SEARCH_STORE_NAME')
 DEFAULT_MODEL = os.getenv('DEFAULT_MODEL', 'gemini-2.5-pro')
 DEFAULT_CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', '512'))
 CHUNK_OVERLAP_PERCENT = int(os.getenv('CHUNK_OVERLAP_PERCENT', '10'))
+RESULTS_COUNT = int(os.getenv('RESULTS_COUNT', '25'))
+MIN_RELEVANCE_SCORE = float(os.getenv('MIN_RELEVANCE_SCORE', '0.3'))
+MAX_CHUNKS_FOR_GENERATION = int(os.getenv('MAX_CHUNKS_FOR_GENERATION', '15'))
 BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 UPLOAD_BASE_URL = 'https://generativelanguage.googleapis.com/upload/v1beta'
 
@@ -40,6 +43,10 @@ UPLOAD_BASE_URL = 'https://generativelanguage.googleapis.com/upload/v1beta'
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # Upload folder temporaneo
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+# Cartella per archiviare i documenti caricati (per download futuro)
+app.config['DOCUMENTS_STORAGE'] = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'documents_storage')
+# Crea la cartella se non esiste
+os.makedirs(app.config['DOCUMENTS_STORAGE'], exist_ok=True)
 
 # MIME types permessi
 ALLOWED_MIME_TYPES = {
@@ -194,7 +201,12 @@ def get_config():
         return jsonify({
             'success': True,
             'store_name': FILE_SEARCH_STORE_NAME,
-            'api_configured': bool(GEMINI_API_KEY)
+            'api_configured': bool(GEMINI_API_KEY),
+            'chunk_size': DEFAULT_CHUNK_SIZE,
+            'chunk_overlap_percent': CHUNK_OVERLAP_PERCENT,
+            'results_count': RESULTS_COUNT,
+            'min_relevance_score': MIN_RELEVANCE_SCORE,
+            'max_chunks_for_generation': MAX_CHUNKS_FOR_GENERATION
         })
     except Exception as e:
         logger.error(f"Errore nel recupero configurazione: {str(e)}")
@@ -473,7 +485,7 @@ def query_documents():
         data = request.json
         query_text = data.get('query')
         document_name = data.get('document_name')  # Opzionale: nome specifico del documento
-        results_count = data.get('results_count', 10)  # Default 10, max 100
+        results_count = data.get('results_count', RESULTS_COUNT)  # Default da .env, max 100
         
         if not query_text:
             return jsonify({
@@ -614,17 +626,43 @@ def generate_response():
         
         logger.info(f"Generazione risposta per: {query_text}")
         
+        # Filtra chunk per generazione basandoci sulla rilevanza
+        # Usa solo chunk con score alto o limita il numero
+        high_score_chunks = [
+            chunk for chunk in relevant_chunks 
+            if chunk.get('chunkRelevanceScore', 0) >= MIN_RELEVANCE_SCORE
+        ]
+        
+        # Se abbiamo troppi chunk anche dopo il filtro, prendi i top N
+        chunks_to_use = high_score_chunks[:MAX_CHUNKS_FOR_GENERATION]
+        
+        logger.info(f"Chunk recuperati: {len(relevant_chunks)}, Score >= {MIN_RELEVANCE_SCORE}: {len(high_score_chunks)}, Usati per generazione: {len(chunks_to_use)}")
+        
         # Costruisci il contesto dai chunk rilevanti
         context_parts = []
-        if relevant_chunks:
-            context_parts.append("Utilizza ESCLUSIVAMENTE i seguenti frammenti di contesto per rispondere alla domanda dell'utente:\n\n")
-            for i, chunk in enumerate(relevant_chunks, 1):
+        if chunks_to_use:
+            context_parts.append("CONTESTO DOCUMENTI:\n\n")
+            for i, chunk in enumerate(chunks_to_use, 1):
                 chunk_text = chunk.get('chunk', {}).get('data', {}).get('stringValue', '')
                 source = chunk.get('source_document', 'documento')
                 context_parts.append(f"[Frammento {i} da {source}]:\n{chunk_text}\n\n")
         
         # Costruisci l'array contents per la conversazione
         contents = []
+        
+        # Aggiungi system instruction come primo messaggio user
+        system_instruction = """Sei un assistente AI specializzato nel rispondere a domande basandoti ESCLUSIVAMENTE sui documenti forniti.
+
+ISTRUZIONI IMPORTANTI:
+1. Leggi attentamente la domanda dell'utente
+2. Analizza i frammenti di contesto forniti
+3. Rispondi SOLO alle informazioni specificamente richieste
+4. Sintetizza e organizza la risposta in modo chiaro e conciso
+5. Non copiare/incollare interi frammenti, ma estrai solo le info rilevanti
+6. Se la risposta richiede dati da più frammenti, uniscili in modo coerente
+7. Se l'informazione non è presente nel contesto, dillo chiaramente
+8. Usa un linguaggio professionale ma comprensibile
+9. Se appropriato, usa elenchi puntati per maggiore chiarezza"""
         
         # Aggiungi la cronologia della chat se presente
         for message in chat_history:
@@ -634,11 +672,12 @@ def generate_response():
             })
         
         # Costruisci il prompt finale per l'utente
-        user_prompt = ''.join(context_parts) if context_parts else ''
-        user_prompt += f"\n\nDomanda: {query_text}"
+        if not chat_history:  # Solo al primo messaggio
+            user_prompt = system_instruction + "\n\n" + ''.join(context_parts)
+        else:
+            user_prompt = ''.join(context_parts) if context_parts else ''
         
-        if context_parts:
-            user_prompt += "\n\nSe la risposta non può essere trovata nel contesto fornito, dillo chiaramente."
+        user_prompt += f"\n\nDOMANDA UTENTE: {query_text}\n\nRISPOSTA:"
         
         contents.append({
             'role': 'user',
@@ -771,14 +810,38 @@ def generate_response_stream():
     def generate():
         """Generatore per lo streaming SSE"""
         try:
+            # Filtra chunk per generazione basandoci sulla rilevanza
+            high_score_chunks = [
+                chunk for chunk in relevant_chunks 
+                if chunk.get('chunkRelevanceScore', 0) >= MIN_RELEVANCE_SCORE
+            ]
+            
+            chunks_to_use = high_score_chunks[:MAX_CHUNKS_FOR_GENERATION]
+            
+            logger.info(f"Streaming - Chunk recuperati: {len(relevant_chunks)}, Score >= {MIN_RELEVANCE_SCORE}: {len(high_score_chunks)}, Usati: {len(chunks_to_use)}")
+            
             # Costruisci il contesto
             context_parts = []
-            if relevant_chunks:
-                context_parts.append("Utilizza ESCLUSIVAMENTE i seguenti frammenti di contesto per rispondere alla domanda dell'utente:\n\n")
-                for i, chunk in enumerate(relevant_chunks, 1):
+            if chunks_to_use:
+                context_parts.append("CONTESTO DOCUMENTI:\n\n")
+                for i, chunk in enumerate(chunks_to_use, 1):
                     chunk_text = chunk.get('chunk', {}).get('data', {}).get('stringValue', '')
                     source = chunk.get('source_document', 'documento')
                     context_parts.append(f"[Frammento {i} da {source}]:\n{chunk_text}\n\n")
+            
+            # System instruction
+            system_instruction = """Sei un assistente AI specializzato nel rispondere a domande basandoti ESCLUSIVAMENTE sui documenti forniti.
+
+ISTRUZIONI IMPORTANTI:
+1. Leggi attentamente la domanda dell'utente
+2. Analizza i frammenti di contesto forniti
+3. Rispondi SOLO alle informazioni specificamente richieste
+4. Sintetizza e organizza la risposta in modo chiaro e conciso
+5. Non copiare/incollare interi frammenti, ma estrai solo le info rilevanti
+6. Se la risposta richiede dati da più frammenti, uniscili in modo coerente
+7. Se l'informazione non è presente nel contesto, dillo chiaramente
+8. Usa un linguaggio professionale ma comprensibile
+9. Se appropriato, usa elenchi puntati per maggiore chiarezza"""
             
             # Costruisci contents
             contents = []
@@ -788,10 +851,13 @@ def generate_response_stream():
                     'parts': [{'text': message.get('text')}]
                 })
             
-            user_prompt = ''.join(context_parts) if context_parts else ''
-            user_prompt += f"\n\nDomanda: {query_text}"
-            if context_parts:
-                user_prompt += "\n\nSe la risposta non può essere trovata nel contesto fornito, dillo chiaramente."
+            # Costruisci prompt
+            if not chat_history:  # Solo al primo messaggio
+                user_prompt = system_instruction + "\n\n" + ''.join(context_parts)
+            else:
+                user_prompt = ''.join(context_parts) if context_parts else ''
+            
+            user_prompt += f"\n\nDOMANDA UTENTE: {query_text}\n\nRISPOSTA:"
             
             contents.append({
                 'role': 'user',

@@ -61,6 +61,13 @@ async function handleUpload(e) {
         formData.append('chunkSize', chunkSizeSelect.value);
     }
     
+    // Aggiungi posizione documento come metadata speciale (se presente)
+    const documentLocationInput = form.querySelector('input[name="documentLocation"]');
+    if (documentLocationInput && documentLocationInput.value.trim()) {
+        formData.append('metadataKeys[]', 'document_location');
+        formData.append('metadataValues[]', documentLocationInput.value.trim());
+    }
+    
     // Filtra e aggiungi solo metadati non vuoti
     const metadataKeys = form.querySelectorAll('input[name="metadataKeys[]"]');
     const metadataValues = form.querySelectorAll('input[name="metadataValues[]"]');

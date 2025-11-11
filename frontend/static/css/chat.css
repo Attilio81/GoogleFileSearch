@@ -583,3 +583,230 @@ body {
 .loader {
     animation: pulse 1.5s ease-in-out infinite;
 }
+
+/* ==================== SOURCE LINKS ==================== */
+.source-link {
+    color: var(--chat-primary);
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--chat-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0;
+}
+
+.source-link:hover {
+    color: var(--chat-primary-dark);
+    text-decoration: underline;
+}
+
+/* ==================== MODAL ==================== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: var(--chat-surface);
+    border-radius: var(--chat-border-radius);
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--chat-border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--chat-text);
+}
+
+.modal-header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-open-document {
+    background: var(--chat-primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: var(--chat-transition);
+}
+
+.btn-open-document:hover {
+    background: var(--chat-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--chat-shadow);
+}
+
+.btn-primary {
+    background: var(--chat-primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: var(--chat-transition);
+    width: 100%;
+}
+
+.btn-primary:hover {
+    background: var(--chat-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--chat-shadow);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--chat-text-secondary);
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: var(--chat-transition);
+}
+
+.modal-close:hover {
+    background: var(--chat-bg);
+    color: var(--chat-text);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    max-height: calc(80vh - 100px);
+}
+
+/* ==================== CHUNK CARDS ==================== */
+.chunk-card {
+    background: var(--chat-bg);
+    border: 1px solid var(--chat-border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: var(--chat-transition);
+}
+
+.chunk-card:hover {
+    box-shadow: var(--chat-shadow);
+    border-color: var(--chat-primary);
+}
+
+.chunk-card:last-child {
+    margin-bottom: 0;
+}
+
+.chunk-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--chat-border);
+}
+
+.chunk-number {
+    font-weight: 600;
+    color: var(--chat-primary);
+    font-size: 0.875rem;
+}
+
+.chunk-score {
+    background: var(--chat-primary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.chunk-text {
+    color: var(--chat-text);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.9rem;
+}
+
+/* ==================== MOBILE MODAL ==================== */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .modal-header {
+        padding: 1rem;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+        max-height: calc(90vh - 80px);
+    }
+    
+    .chunk-card {
+        padding: 0.75rem;
+    }
+}

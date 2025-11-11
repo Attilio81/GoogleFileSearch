@@ -283,7 +283,8 @@ async function handleSendMessage(e) {
         const generationData = await generationResponse.json();
 
         if (!generationData.success) {
-            const details = generationData.details ? `: ${generationData.details}` : '';
+            console.error('❌ Errore generazione:', generationData);
+            const details = generationData.details ? `: ${JSON.stringify(generationData.details)}` : '';
             throw new Error((generationData.error || 'Errore durante la generazione della risposta') + details);
         }
         
@@ -355,9 +356,17 @@ function addMessage(type, content, sources = []) {
                 <div class="message-sources">
                     <strong>📚 Fonti:</strong>
                     <ul>
-                        ${uniqueSources.map(src => `<li>${escapeHtml(src)}</li>`).join('')}
+                        ${uniqueSources.map((src, idx) => {
+                            // Trova i chunk di questa fonte
+                            const sourceChunks = sources.filter(s => s.source_document === src);
+                            return `<li>
+                                <span class="source-link" onclick="showSourceChunks(${JSON.stringify(sourceChunks).replace(/"/g, '&quot;')}, '${escapeHtml(src)}')">
+                                    📄 ${escapeHtml(src)} (${sourceChunks.length} frammenti)
+                                </span>
+                            </li>`;
+                        }).join('')}
                     </ul>
-                    <small>${sources.length} frammenti utilizzati</small>
+                    <small>${sources.length} frammenti totali utilizzati - Clicca per vedere i dettagli</small>
                 </div>
             `;
         }
@@ -459,6 +468,146 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Mostra i chunk della fonte in un modal
+function showSourceChunks(chunks, sourceName) {
+    // Crea modal se non esiste
+    let modal = document.getElementById('source-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'source-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-source-title"></h3>
+                    <button class="modal-close" onclick="closeSourceModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="modal-chunks-content"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Chiudi modal cliccando fuori
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeSourceModal();
+            }
+        });
+    }
+    
+    // Cerca document_location nei metadata del primo chunk
+    let documentLocation = null;
+    if (chunks.length > 0 && chunks[0].chunk?.customMetadata) {
+        const metadata = chunks[0].chunk.customMetadata;
+        const locationMeta = metadata.find(m => m.key === 'document_location');
+        if (locationMeta && locationMeta.stringValue) {
+            documentLocation = locationMeta.stringValue;
+        }
+    }
+    
+    // Popola il modal header con pulsante apri documento se disponibile
+    let headerButtons = '<button class="modal-close" onclick="closeSourceModal()">&times;</button>';
+    if (documentLocation) {
+        headerButtons = `
+            <button class="btn-open-document" onclick="openDocument('${escapeHtml(documentLocation).replace(/'/g, "\\'")}')">
+                📂 Apri Documento
+            </button>
+        ` + headerButtons;
+    }
+    
+    document.getElementById('modal-source-title').innerHTML = `📄 ${escapeHtml(sourceName)}`;
+    document.querySelector('#source-modal .modal-header').innerHTML = `
+        <h3 id="modal-source-title">📄 ${escapeHtml(sourceName)}</h3>
+        <div class="modal-header-actions">
+            ${headerButtons}
+        </div>
+    `;
+    
+    const chunksHtml = chunks.map((chunk, idx) => {
+        const chunkText = chunk.chunk?.data?.stringValue || 'Contenuto non disponibile';
+        const score = chunk.chunkRelevanceScore ? (chunk.chunkRelevanceScore * 100).toFixed(1) : 'N/A';
+        
+        return `
+            <div class="chunk-card">
+                <div class="chunk-header">
+                    <span class="chunk-number">Frammento ${idx + 1}</span>
+                    <span class="chunk-score" title="Rilevanza">📊 ${score}%</span>
+                </div>
+                <div class="chunk-text">${escapeHtml(chunkText)}</div>
+            </div>
+        `;
+    }).join('');
+    
+    document.getElementById('modal-chunks-content').innerHTML = chunksHtml;
+    
+    // Mostra modal
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Chiudi modal delle fonti
+function closeSourceModal() {
+    const modal = document.getElementById('source-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Apri il documento nella posizione specificata
+function openDocument(location) {
+    // Verifica se è un URL (http/https)
+    if (location.match(/^https?:\/\//i)) {
+        // Apri URL in nuova tab
+        window.open(location, '_blank');
+        showToast('Apertura documento in una nuova scheda...', 'info');
+    } else if (location.match(/^file:\/\//i)) {
+        // Link file:// - prova ad aprire
+        window.open(location, '_blank');
+        showToast('Tentativo di apertura del file locale...', 'info');
+    } else {
+        // Path locale - mostra percorso da copiare
+        // Crea un modal informativo
+        const infoModal = document.createElement('div');
+        infoModal.className = 'modal';
+        infoModal.style.display = 'flex';
+        infoModal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3>📂 Posizione Documento</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Il documento si trova in:</p>
+                    <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin: 1rem 0; font-family: monospace; word-break: break-all;">
+                        ${escapeHtml(location)}
+                    </div>
+                    <button class="btn-primary" onclick="copyToClipboard('${escapeHtml(location).replace(/'/g, "\\'")}'); this.closest('.modal').remove();">
+                        📋 Copia Percorso
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(infoModal);
+        
+        // Chiudi cliccando fuori
+        infoModal.addEventListener('click', (e) => {
+            if (e.target === infoModal) {
+                infoModal.remove();
+            }
+        });
+    }
+}
+
+// Copia testo negli appunti
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Percorso copiato negli appunti!', 'success');
+    }).catch(() => {
+        showToast('Impossibile copiare. Copia manualmente il percorso.', 'error');
+    });
 }
 
 // Toast notifications

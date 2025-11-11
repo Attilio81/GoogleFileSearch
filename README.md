@@ -1,10 +1,41 @@
 # 🤖 Google File Search RAG - Sistema di Gestione Documenti e Chatbot
 
-Sistema completo per la gestione di documenti e chatbot basato su **Google File Search API** e **Gemini AI**. Implementa un sistema RAG (Retrieval-Augmented Generation) per interrogare documenti con intelligenza artificiale.
+Sistema completo per la gestione di documenti e chatbot basato su **Google File Search API** e **Gemini AI**. Implementa un sistema RAG (Retrieval-Augmented Generation) avanzato per interrogare documenti con intelligenza artificiale.
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.0+-green)
 ![Google AI](https://img.shields.io/badge/Google%20AI-Gemini-orange)
+![RAG](https://img.shields.io/badge/RAG-Optimized-purple)
+
+---
+
+## 🚀 Quick Start (Nuovo PC)
+
+### 1️⃣ Scarica il progetto
+```bash
+git clone https://github.com/Attilio81/GoogleFileSearch.git
+cd GoogleFileSearch
+```
+
+### 2️⃣ Installa (Windows)
+Doppio click su **`setup.bat`** → Installa tutto automaticamente
+
+### 3️⃣ Configura `.env`
+Si apre automaticamente. Inserisci:
+```env
+GEMINI_API_KEY=la-tua-api-key
+FILE_SEARCH_STORE_NAME=fileSearchStores/il-tuo-store-id
+```
+[Ottieni API Key](https://makersuite.google.com/app/apikey)
+
+### 4️⃣ Avvia
+Doppio click su **`start.bat`**
+
+✅ **Fatto!** Vai su http://localhost:5000
+
+📖 Guida completa: [INSTALL.md](INSTALL.md)
+
+---
 
 ## 🎯 Funzionalità
 
@@ -14,17 +45,25 @@ Sistema completo per la gestione di documenti e chatbot basato su **Google File 
 - **📋 Visualizzazione**: Lista completa dei documenti con stato, dimensione e metadati
 - **🔍 Monitoraggio**: Tracking in tempo reale delle operazioni di upload in corso
 - **🗑️ Eliminazione**: Rimozione sicura dei documenti con conferma (elimina anche i chunk associati)
-- **⚙️ Metadati Custom**: Supporto per metadati personalizzati durante l'upload
+- **⚙️ Metadati Custom**: Supporto per metadati personalizzati durante l'upload con chiave riservata `document_location` per percorsi file
+- **✂️ Chunking Configurabile**: Dimensione chunk (1-512 token) e overlap (0-50%) personalizzabili
+- **🔗 Fonti Cliccabili**: Apertura diretta dei documenti originali tramite metadato `document_location`
+- **📊 Visualizzazione Chunks**: Modal per visualizzare tutti i chunks di ogni documento
 - **Formati supportati**: PDF, TXT, DOC, DOCX, XLS, XLSX, CSV, JSON, HTML, MD
 
-### 💬 Chatbot RAG
+### 💬 Chatbot RAG (Ottimizzato)
 
-- **🔍 Retrieval semantico** sui documenti caricati
-- **🤖 Generazione risposte** con Gemini AI
+- **🔍 Retrieval semantico avanzato** con filtro per relevance score
+- **🎯 Filtraggio intelligente**: Solo chunks con score >= 0.3 (configurabile)
+- **📉 Riduzione rumore**: Massimo 15 chunks più rilevanti inviati a Gemini (configurabile)
+- **🤖 Generazione risposte sintetizzate** con prompt engineering ottimizzato
 - **💭 Conversazioni multi-turn** con memoria del contesto
-- **📚 Visualizzazione fonti** dei documenti utilizzati
-- **⚙️ Selezione modello** Gemini configurabile
-- **🔄 Retry automatico** su errori di rate limit
+- **📚 Visualizzazione fonti pertinenti** solo dai documenti effettivamente utilizzati
+- **📄 Apertura documenti**: Click su "Apri Documento" per vedere il file originale
+- **⚙️ Selezione modello** Gemini configurabile (gemini-2.5-flash, gemini-2.5-pro)
+- **🔄 Circuit Breaker**: Gestione automatica rate limit con fallback
+- **📊 Configurazione dinamica**: Numero chunks recuperati (RESULTS_COUNT) configurabile
+- **🎛️ Streaming SSE**: Risposte in tempo reale con Server-Sent Events
 - **📱 Design responsive** per mobile e desktop
 
 ## 🏗️ Architettura
@@ -105,8 +144,19 @@ cp .env.example .env
 Modifica `.env` con i tuoi dati:
 
 ```env
+# API Configuration
 GEMINI_API_KEY=la_tua_api_key
 FILE_SEARCH_STORE_NAME=fileSearchStores/il-tuo-store-id
+DEFAULT_MODEL=gemini-2.5-flash
+
+# Chunking Configuration
+CHUNK_SIZE=512                    # Dimensione chunk in token (1-512)
+CHUNK_OVERLAP_PERCENT=25          # Overlap tra chunks (0-50%)
+
+# RAG Configuration
+RESULTS_COUNT=25                  # Chunks da recuperare (10-40)
+MIN_RELEVANCE_SCORE=0.3          # Soglia minima rilevanza (0.0-1.0)
+MAX_CHUNKS_FOR_GENERATION=15     # Max chunks per generazione (1-25)
 ```
 
 #### Come ottenere l'API Key:
@@ -181,24 +231,34 @@ La tabella mostra tutti i documenti con il loro stato:
 
 ### Configurazione
 
-- `GET /api/config` - Restituisce la configurazione corrente (senza API key)
+- `GET /api/config` - Restituisce la configurazione corrente completa
+  - Parametri: chunk_size, chunk_overlap_percent, results_count, min_relevance_score, max_chunks_for_generation
 
 ### Gestione Documenti
 
 - `GET /api/documents` - Lista documenti con paginazione
 - `POST /api/documents/upload` - Upload documento (Long-Running Operation)
-- `DELETE /api/documents/{name}` - Elimina documento
+  - Supporta metadati custom e `document_location` per percorso file
+- `POST /api/documents/{name}/chunks` - Recupera chunks di un documento
+- `DELETE /api/documents/{name}` - Elimina documento (force=true elimina anche chunks)
 - `GET /api/operations/{name}` - Stato operazione di upload
 
 ### Chatbot RAG
 
-- `POST /api/chat/query` - Retrieval (cerca chunk rilevanti)
-- `POST /api/chat/generate` - Generation (genera risposta)
+- `POST /api/chat/query` - Retrieval Phase (cerca chunk rilevanti)
+  - Parametri: query, results_count (opzionale)
+  - Restituisce: relevant_chunks con chunkRelevanceScore
+- `POST /api/chat/generate` - Generation Phase (genera risposta)
+  - Parametri: query, relevant_chunks, model (opzionale)
+  - Applica filtro MIN_RELEVANCE_SCORE e MAX_CHUNKS_FOR_GENERATION
+- `POST /api/chat/generate-stream` - Generation con SSE streaming
+  - Stessi parametri di generate, ma risposta in streaming
 
 ### Interfacce
 
-- `GET /` - Admin panel
-- `GET /chat` - Chatbot interface
+- `GET /` - Admin panel (gestione documenti)
+- `GET /chat` - Chatbot interface (RAG queries)
+- `GET /chunks` - Chunks viewer (visualizzazione chunks)
 
 ## 🤖 Modelli Gemini Supportati
 
@@ -209,13 +269,73 @@ La tabella mostra tutti i documenti con il loro stato:
 | `gemini-1.5-pro-latest` | Medio | Medio | Per query complesse |
 | `gemini-2.0-flash-exp` | Variabile | Basso | ⚠️ Solo test |
 
-## 🔧 Troubleshooting
+## ⚙️ Configurazione Avanzata
+
+### Parametri RAG Ottimizzati
+
+| Parametro | Default | Range | Descrizione |
+|-----------|---------|-------|-------------|
+| `CHUNK_SIZE` | 512 | 1-512 | Token per chunk (limite API Google) |
+| `CHUNK_OVERLAP_PERCENT` | 25% | 0-50% | Sovrapposizione tra chunks per continuità |
+| `RESULTS_COUNT` | 25 | 10-100 | Chunks da recuperare dalla ricerca semantica |
+| `MIN_RELEVANCE_SCORE` | 0.3 | 0.0-1.0 | Soglia minima per includere chunk nella risposta |
+| `MAX_CHUNKS_FOR_GENERATION` | 15 | 1-25 | Max chunks inviati a Gemini per generazione |
+
+### Scenari di Utilizzo
+
+**📄 Documenti Semplici (FAQ, Guide Brevi)**
+```env
+RESULTS_COUNT=15
+MIN_RELEVANCE_SCORE=0.4
+MAX_CHUNKS_FOR_GENERATION=10
+```
+
+**📚 Documenti Tecnici (Manuali, Preventivi)** ✅ CONSIGLIATO
+```env
+RESULTS_COUNT=25
+MIN_RELEVANCE_SCORE=0.3
+MAX_CHUNKS_FOR_GENERATION=15
+```
+
+**� Analisi Complesse (Multi-Documento)**
+```env
+RESULTS_COUNT=40
+MIN_RELEVANCE_SCORE=0.2
+MAX_CHUNKS_FOR_GENERATION=20
+```
+
+### Come Funziona il Filtro Intelligente
+
+1. **Retrieval**: Recupera `RESULTS_COUNT` chunks (es. 25)
+2. **Filtro Score**: Scarta chunks con score < `MIN_RELEVANCE_SCORE`
+3. **Top-N Selection**: Prende i primi `MAX_CHUNKS_FOR_GENERATION` (es. 15)
+4. **Generation**: Invia solo i 15 migliori a Gemini
+
+**Vantaggi**:
+- ✅ Riduce "rumore" da chunks non pertinenti
+- ✅ Velocizza generazione (meno token)
+- ✅ Migliora qualità risposta (contesto più focalizzato)
+- ✅ Mostra solo fonti realmente rilevanti
+
+📖 **Dettagli**: Vedi [LOGICA_FILTRAGGIO_CHUNKS.md](LOGICA_FILTRAGGIO_CHUNKS.md)
+
+## �🔧 Troubleshooting
 
 ### Errore 429 (Rate Limit)
-**Soluzione:** Cambia modello a `gemini-2.5-flash-lite` nelle impostazioni del chatbot
+**Soluzione:** Cambia modello a `gemini-2.5-flash` o riduci `MAX_CHUNKS_FOR_GENERATION`
 
-### Errore 404 sul modello
-**Soluzione:** Usa solo modelli supportati (vedi tabella sopra)
+### Errore 503 (Model Overloaded)
+**Soluzione:** Transiente, riprova dopo qualche secondo. Circuit breaker gestisce automaticamente.
+
+### Troppe Fonti Non Pertinenti
+**Soluzione:** Aumenta `MIN_RELEVANCE_SCORE` a 0.4-0.5 in `.env`
+
+### Risposta Troppo Generica
+**Soluzione:** Riduci `MAX_CHUNKS_FOR_GENERATION` a 10 e aumenta `MIN_RELEVANCE_SCORE`
+
+### "Recupera sempre 17 chunks invece di 25"
+**Causa:** Limite interno API Google o pochi chunks disponibili
+**Soluzione:** Verifica numero totale chunks nel documento via modal
 
 ### Documento in PROCESSING
 **Soluzione:** Attendi qualche minuto, l'elaborazione richiede tempo
@@ -227,10 +347,7 @@ La tabella mostra tutti i documenti con il loro stato:
 - **Causa**: Store name non valido o store inesistente
 - **Soluzione**: Esegui `python backend/create_store.py` e aggiorna `.env`
 
-### Operazione bloccata su STATE_PENDING
-- Normale per file grandi (può richiedere minuti)
-- Controlla i log del server per errori
-- Verifica lo stato tramite API Google direttamente
+📖 **Guida completa**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 ## 🔍 Dettagli Tecnici
 
@@ -273,7 +390,10 @@ L'upload dei documenti è asincrono:
 
 ```bash
 cd backend
-python test_api.py
+python test_api.py          # Verifica API Key e Store
+python test_upload.py       # Test upload documento
+python test_chunks.py       # Test retrieval chunks
+python test_list_documents.py  # Test lista documenti
 ```
 
 ### Crea Nuovo File Search Store
@@ -289,11 +409,77 @@ python create_store.py
 python setup.py
 ```
 
-## 📚 Risorse
+### Visualizza Configurazione Corrente
+
+```bash
+curl http://localhost:5000/api/config
+```
+
+## 📊 Monitoring e Logging
+
+### Log Dettagliati
+
+Il server registra:
+- **Chunk Stats**: "Chunk recuperati: 25, Score >= 0.3: 17, Usati: 15"
+- **Operazioni Upload**: Progress e stato elaborazione
+- **Circuit Breaker**: Stato (CLOSED/OPEN/HALF_OPEN)
+- **Errori API**: Dettagli completi per debugging
+
+### Frontend Console
+
+Apri DevTools (F12) per vedere:
+- ✅ "Recuperati X chunk rilevanti"
+- ⚙️ Configurazione caricata (chunk_size, overlap, etc.)
+- 📊 Score rilevanza per ogni chunk
+- ❌ Errori dettagliati con stack trace
+
+## 📚 Documentazione Aggiuntiva
+
+- **[INSTALL.md](INSTALL.md)** - Guida installazione completa con checklist
+- **[LOGICA_FILTRAGGIO_CHUNKS.md](LOGICA_FILTRAGGIO_CHUNKS.md)** - Spiegazione dettagliata filtro RAG
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Risoluzione problemi comuni
+- **[MANUALE_OTTIMIZZATO.md](MANUALE_OTTIMIZZATO.md)** - Best practices per formattazione documenti
+- **[IMPROVEMENTS_LOG.md](IMPROVEMENTS_LOG.md)** - Cronologia miglioramenti
+
+### Risorse Esterne
 
 - [Google Gemini API Documentation](https://ai.google.dev/docs)
 - [File Search API Reference](https://ai.google.dev/api/rest/v1beta/fileSearchStores)
 - [Flask Documentation](https://flask.palletsprojects.com/)
+- [RAG Best Practices](https://www.anthropic.com/index/contextual-retrieval)
+
+## 🚀 Changelog
+
+### v2.0.0 (2025-11-11)
+
+**🎯 RAG Ottimizzato**
+- ✨ Filtro intelligente per relevance score (MIN_RELEVANCE_SCORE)
+- ✨ Limite configurabile chunks per generazione (MAX_CHUNKS_FOR_GENERATION)
+- ✨ Prompt engineering migliorato per risposte sintetizzate
+- ✨ Riduzione fonti non pertinenti nella visualizzazione
+
+**📄 Gestione Documenti**
+- ✨ Metadato riservato `document_location` per percorsi file
+- ✨ Pulsante "Apri Documento" per apertura file originali
+- ✨ Modal visualizzazione chunks con score rilevanza
+- ✨ Chunking configurabile (size + overlap %)
+
+**⚙️ Configurazione**
+- ✨ RESULTS_COUNT configurabile via .env (default 25)
+- ✨ Esposizione parametri via /api/config
+- ✨ Documentazione completa logica filtraggio
+
+**🔧 Miglioramenti Tecnici**
+- 🐛 Fix visualizzazione fonti (solo documenti usati)
+- 🐛 Circuit breaker per gestione rate limit
+- 📊 Logging dettagliato con statistiche chunks
+- 🎨 UI migliorata con icone e feedback visivo
+
+### v1.0.0 (2024)
+- 🎉 Release iniziale
+- 📤 Upload documenti con metadati custom
+- 💬 Chatbot RAG con Gemini
+- 🔍 Ricerca semantica multi-documento
 
 ## 👨‍💻 Autore
 
@@ -301,10 +487,21 @@ python setup.py
 - GitHub: [@Attilio81](https://github.com/Attilio81)
 - Repository: [GoogleFileSearch](https://github.com/Attilio81/GoogleFileSearch)
 
+## 🤝 Contributi
+
+I contributi sono benvenuti! Per favore:
+1. Fork il repository
+2. Crea un branch per la tua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit le modifiche (`git commit -m 'Add some AmazingFeature'`)
+4. Push al branch (`git push origin feature/AmazingFeature`)
+5. Apri una Pull Request
+
 ## 📄 Licenza
 
 MIT License - Vedi [LICENSE](LICENSE) per dettagli
 
 ---
 
-**Made with ❤️ using Google AI and Flask**
+**Made with ❤️ using Google AI, Flask and RAG optimization**
+
+⭐ Se ti piace questo progetto, lascia una stella su GitHub!

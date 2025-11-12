@@ -4,6 +4,9 @@
 # Google File Search Application - Linux
 # ========================================
 
+# Vai alla root del progetto (cartella padre di setup/)
+cd "$(dirname "$0")/.."
+
 echo ""
 echo "===================================="
 echo " AVVIO SERVER PRODUZIONE"
@@ -13,7 +16,7 @@ echo ""
 # Verifica ambiente virtuale
 if [ ! -d "venv" ]; then
     echo "ERRORE: Ambiente virtuale non trovato!"
-    echo "Esegui prima ./setup.sh"
+    echo "Esegui prima setup/setup.sh"
     exit 1
 fi
 

@@ -18,7 +18,7 @@ cd GoogleFileSearch
 ```
 
 ### 2️⃣ Installa (Windows)
-Doppio click su **`setup.bat`** → Installa tutto automaticamente
+Doppio click su **`setup/setup.bat`** → Installa tutto automaticamente
 
 ### 3️⃣ Configura `.env`
 Si apre automaticamente. Inserisci:
@@ -29,11 +29,11 @@ FILE_SEARCH_STORE_NAME=fileSearchStores/il-tuo-store-id
 [Ottieni API Key](https://makersuite.google.com/app/apikey)
 
 ### 4️⃣ Avvia
-Doppio click su **`start.bat`**
+Doppio click su **`setup/start.bat`**
 
 ✅ **Fatto!** Vai su http://localhost:5000
 
-📖 Guida completa: [INSTALL.md](INSTALL.md)
+📖 Guida completa: [setup/INSTALL.md](setup/INSTALL.md)
 
 ---
 
@@ -78,25 +78,39 @@ User Query → Retrieval (File Search API) → Generation (Gemini) → Response
 
 ```
 GoogleFileSearch/
-├── backend/
+├── backend/                      # Backend Flask
 │   ├── app.py                    # Flask app principale
 │   ├── create_store.py           # Crea File Search Store
-│   └── test_*.py                 # Script di test
-├── frontend/
+│   ├── test_*.py                 # Script di test API
+│   └── tests/                    # Test suite (pytest)
+│       ├── test_rag.py           # Test validazione RAG
+│       └── README.md             # Guida esecuzione test
+├── frontend/                     # Frontend HTML/CSS/JS
 │   ├── static/
-│   │   ├── css/
-│   │   │   ├── styles.css        # Stili admin
-│   │   │   └── chat.css          # Stili chatbot
-│   │   └── js/
-│   │       ├── app.js            # Logic admin
-│   │       └── chat.js           # Logic chatbot
-│   └── templates/
+│   │   ├── css/                  # Stili
+│   │   └── js/                   # JavaScript
+│   └── templates/                # Template HTML
 │       ├── index.html            # Admin UI
-│       └── chat.html             # Chat UI
-├── .env                          # Config (da creare)
+│       ├── chat.html             # Chat UI
+│       └── chunks.html           # Visualizzazione chunks
+├── setup/                        # 📁 Script installazione e avvio
+│   ├── setup.bat/sh              # Installazione automatica
+│   ├── start.bat/sh              # Avvio development
+│   ├── start-production.sh       # Avvio production
+│   ├── INSTALL.md                # Guida installazione
+│   └── CHECKLIST.md              # Checklist setup
+├── docs/                         # 📚 Documentazione tecnica
+│   ├── LOGICA_FILTRAGGIO_CHUNKS.md  # Architettura RAG
+│   ├── TROUBLESHOOTING.md        # Risoluzione problemi
+│   ├── IMPROVEMENTS_LOG.md       # Changelog
+│   └── README.md                 # Indice documentazione
+├── documents_storage/            # Storage documenti caricati
+├── logs/                         # Log applicazione
+├── venv/                         # Virtual environment Python
+├── .env                          # ⚙️ Configurazione (da creare)
 ├── .env.example                  # Template configurazione
 ├── requirements.txt              # Dipendenze Python
-└── README.md                     # Questa documentazione
+└── README.md                     # 📖 Questa documentazione
 ```
 
 ## 🚀 Setup e Installazione
@@ -347,7 +361,7 @@ MAX_CHUNKS_FOR_GENERATION=20
 - **Causa**: Store name non valido o store inesistente
 - **Soluzione**: Esegui `python backend/create_store.py` e aggiorna `.env`
 
-📖 **Guida completa**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+📖 **Guida completa**: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ## 🔍 Dettagli Tecnici
 
@@ -433,13 +447,21 @@ Apri DevTools (F12) per vedere:
 - 📊 Score rilevanza per ogni chunk
 - ❌ Errori dettagliati con stack trace
 
-## 📚 Documentazione Aggiuntiva
+## 📚 Documentazione
 
-- **[INSTALL.md](INSTALL.md)** - Guida installazione completa con checklist
-- **[LOGICA_FILTRAGGIO_CHUNKS.md](LOGICA_FILTRAGGIO_CHUNKS.md)** - Spiegazione dettagliata filtro RAG
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Risoluzione problemi comuni
-- **[MANUALE_OTTIMIZZATO.md](MANUALE_OTTIMIZZATO.md)** - Best practices per formattazione documenti
-- **[IMPROVEMENTS_LOG.md](IMPROVEMENTS_LOG.md)** - Cronologia miglioramenti
+### Setup e Installazione
+- **[setup/INSTALL.md](setup/INSTALL.md)** - Guida installazione completa con checklist
+- **[setup/CHECKLIST.md](setup/CHECKLIST.md)** - Checklist verifica setup
+- **[setup/README.md](setup/README.md)** - Guida script setup e avvio
+
+### Documentazione Tecnica
+- **[docs/LOGICA_FILTRAGGIO_CHUNKS.md](docs/LOGICA_FILTRAGGIO_CHUNKS.md)** - Architettura RAG e filtraggio
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Risoluzione problemi comuni
+- **[docs/IMPROVEMENTS_LOG.md](docs/IMPROVEMENTS_LOG.md)** - Cronologia miglioramenti
+- **[docs/README.md](docs/README.md)** - Indice completo documentazione
+
+### Test
+- **[backend/tests/README.md](backend/tests/README.md)** - Guida esecuzione test suite
 
 ### Risorse Esterne
 

@@ -4,6 +4,9 @@ REM Script di Avvio Rapido
 REM Google File Search Application
 REM ========================================
 
+REM Vai alla root del progetto (cartella padre di setup/)
+cd /d "%~dp0.."
+
 echo.
 echo ====================================
 echo  AVVIO GOOGLE FILE SEARCH
@@ -13,7 +16,7 @@ echo.
 REM Verifica ambiente virtuale
 if not exist venv (
     echo ERRORE: Ambiente virtuale non trovato!
-    echo Esegui prima setup.bat per installare l'applicazione.
+    echo Esegui prima setup\setup.bat per installare l'applicazione.
     pause
     exit /b 1
 )

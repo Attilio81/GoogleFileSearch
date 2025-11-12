@@ -4,6 +4,9 @@
 # Google File Search Application - Linux
 # ========================================
 
+# Vai alla root del progetto (cartella padre di setup/)
+cd "$(dirname "$0")/.."
+
 echo ""
 echo "===================================="
 echo " INSTALLAZIONE GOOGLE FILE SEARCH"

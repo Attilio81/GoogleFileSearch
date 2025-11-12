@@ -291,8 +291,12 @@ async function handleSendMessage(e) {
         const response = generationData.response;
         console.log('✅ Risposta generata con successo');
         
+        // Usa i chunks filtrati se disponibili, altrimenti quelli recuperati
+        const chunksToShow = generationData.chunks_filtered || relevantChunks;
+        console.log(`📊 Chunks mostrati nelle fonti: ${chunksToShow.length} su ${relevantChunks.length} recuperati`);
+        
         // Aggiungi messaggio assistente
-        addMessage('assistant', response, relevantChunks);
+        addMessage('assistant', response, chunksToShow);
         
         // Aggiorna cronologia per multi-turn
         chatHistory.push({

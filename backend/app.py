@@ -56,6 +56,98 @@ ALLOWED_MIME_TYPES = {
     'text/csv', 'application/json'
 }
 
+# Cache in-memory per query con TTL
+class QueryCache:
+    """Cache semplice in-memory per risultati query con Time-To-Live"""
+    def __init__(self, ttl_seconds=300):  # Default: 5 minuti
+        self.cache = {}
+        self.ttl = ttl_seconds
+    
+    def get(self, key):
+        """Recupera valore dalla cache se non scaduto"""
+        if key in self.cache:
+            value, timestamp = self.cache[key]
+            if time.time() - timestamp < self.ttl:
+                logger.debug(f"Cache HIT per query: {key[:50]}...")
+                return value
+            else:
+                # Scaduto, rimuovi
+                del self.cache[key]
+                logger.debug(f"Cache EXPIRED per query: {key[:50]}...")
+        return None
+    
+    def set(self, key, value):
+        """Memorizza valore in cache con timestamp"""
+        self.cache[key] = (value, time.time())
+        logger.debug(f"Cache SET per query: {key[:50]}...")
+    
+    def clear(self):
+        """Svuota cache"""
+        self.cache.clear()
+        logger.info("Cache svuotata")
+    
+    def size(self):
+        """Ritorna numero elementi in cache"""
+        return len(self.cache)
+
+# Inizializza cache globale
+query_cache = QueryCache(ttl_seconds=int(os.getenv('QUERY_CACHE_TTL', '300')))
+
+# Rate limiter in-memory
+class RateLimiter:
+    """Rate limiter semplice basato su token bucket"""
+    def __init__(self, max_requests=10, time_window=60):
+        self.max_requests = max_requests
+        self.time_window = time_window  # secondi
+        self.requests = {}  # {ip: [(timestamp, ...), ...]}
+    
+    def is_allowed(self, identifier):
+        """Verifica se la richiesta è permessa"""
+        now = time.time()
+        
+        # Pulisci richieste vecchie
+        if identifier in self.requests:
+            self.requests[identifier] = [
+                ts for ts in self.requests[identifier]
+                if now - ts < self.time_window
+            ]
+        else:
+            self.requests[identifier] = []
+        
+        # Controlla limite
+        if len(self.requests[identifier]) >= self.max_requests:
+            logger.warning(f"Rate limit exceeded per {identifier}")
+            return False
+        
+        # Aggiungi nuova richiesta
+        self.requests[identifier].append(now)
+        return True
+    
+    def get_remaining(self, identifier):
+        """Ritorna richieste rimanenti"""
+        now = time.time()
+        if identifier not in self.requests:
+            return self.max_requests
+        
+        recent = [ts for ts in self.requests[identifier] if now - ts < self.time_window]
+        return max(0, self.max_requests - len(recent))
+
+# Inizializza rate limiter
+rate_limiter = RateLimiter(
+    max_requests=int(os.getenv('RATE_LIMIT_MAX', '30')),
+    time_window=int(os.getenv('RATE_LIMIT_WINDOW', '60'))
+)
+
+# Session requests per connection pooling
+http_session = requests.Session()
+adapter = requests.adapters.HTTPAdapter(
+    pool_connections=10,
+    pool_maxsize=20,
+    max_retries=3
+)
+http_session.mount('https://', adapter)
+http_session.mount('http://', adapter)
+
 # Circuit Breaker per gestione rate limit
 class CircuitBreaker:
     """Circuit breaker per gestire rate limit 429"""
@@ -228,7 +320,7 @@ def list_documents():
             params['pageToken'] = page_token
         
         logger.info(f"Recupero documenti da: {url}")
-        response = requests.get(url, headers=headers, params=params)
+        response = http_session.get(url, headers=headers, params=params)
         response.raise_for_status()
         
         data = response.json()
@@ -352,7 +444,7 @@ def upload_document():
             logger.info(f"Metadata: {json.dumps(metadata)}")
             
             # Effettua l'upload - restituisce un'operazione
-            response = requests.post(url, headers=headers, files=files)
+            response = http_session.post(url, headers=headers, files=files)
             response.raise_for_status()
         
         operation_data = response.json()
@@ -404,7 +496,7 @@ def get_operation_status(operation_name):
         
         logger.info(f"Controllo stato operazione: {operation_name}")
         
-        response = requests.get(url, headers=headers)
+        response = http_session.get(url, headers=headers)
         response.raise_for_status()
         
         operation_data = response.json()
@@ -451,7 +543,7 @@ def delete_document(document_name):
         
         logger.info(f"Eliminazione documento: {document_name}")
         
-        response = requests.delete(url, headers=headers, params=params)
+        response = http_session.delete(url, headers=headers, params=params)
         response.raise_for_status()
         
         logger.info(f"Documento eliminato con successo")
@@ -482,6 +574,14 @@ def query_documents():
     Recupera i chunk rilevanti dai documenti attivi
     """
     try:
+        # Rate limiting
+        client_ip = request.remote_addr
+        if not rate_limiter.is_allowed(client_ip):
+            return jsonify({
+                'success': False,
+                'error': 'Troppe richieste. Riprova tra un minuto.'
+            }), 429
+        
         data = request.json
         query_text = data.get('query')
         document_name = data.get('document_name')  # Opzionale: nome specifico del documento
@@ -500,11 +600,18 @@ def query_documents():
         
         logger.info(f"Query ricevuta: {query_text}")
         
+        # Cache check
+        cache_key = f"{query_text}:{document_name}:{results_count}"
+        cached_result = query_cache.get(cache_key)
+        if cached_result:
+            logger.info("Risultato recuperato da cache")
+            return jsonify(cached_result)
+        
         # Se non è specificato un documento, cerchiamo in tutti i documenti attivi
         if not document_name:
             # Prima otteniamo la lista dei documenti attivi
             list_url = f"{BASE_URL}/{FILE_SEARCH_STORE_NAME}/documents"
-            list_response = requests.get(list_url, headers=get_headers())
+            list_response = http_session.get(list_url, headers=get_headers())
             list_response.raise_for_status()
             
             documents_data = list_response.json()
@@ -531,7 +638,7 @@ def query_documents():
                 }
                 
                 try:
-                    query_response = requests.post(query_url, headers=get_headers(), json=query_payload)
+                    query_response = http_session.post(query_url, headers=get_headers(), json=query_payload)
                     query_response.raise_for_status()
                     
                     result = query_response.json()
@@ -552,12 +659,17 @@ def query_documents():
             # Limita al numero richiesto
             all_chunks = all_chunks[:results_count]
             
-            return jsonify({
+            result_data = {
                 'success': True,
                 'relevant_chunks': all_chunks,
                 'query': query_text,
                 'documents_searched': len(active_documents)
-            })
+            }
+            
+            # Salva in cache
+            query_cache.set(cache_key, result_data)
+            
+            return jsonify(result_data)
         
         else:
             # Query su un documento specifico
@@ -568,7 +680,7 @@ def query_documents():
                 'resultsCount': results_count
             }
             
-            query_response = requests.post(query_url, headers=get_headers(), json=query_payload)
+            query_response = http_session.post(query_url, headers=get_headers(), json=query_payload)
             query_response.raise_for_status()
             
             result = query_response.json()
@@ -703,7 +815,7 @@ ISTRUZIONI IMPORTANTI:
         response = None
         for attempt in range(max_retries):
             try:
-                response = requests.post(generate_url, headers=get_headers(), json=payload, timeout=60)
+                response = http_session.post(generate_url, headers=get_headers(), json=payload, timeout=60)
                 response.raise_for_status()
                 
                 # REGISTRA SUCCESSO NEL CIRCUIT BREAKER
@@ -744,7 +856,8 @@ ISTRUZIONI IMPORTANTI:
             'response': response_text,
             'query': query_text,
             'model': model,
-            'chunks_used': len(relevant_chunks)
+            'chunks_used': len(chunks_to_use),
+            'chunks_filtered': chunks_to_use  # Restituisce solo i chunks effettivamente usati
         })
         
     except requests.exceptions.RequestException as e:
@@ -877,7 +990,7 @@ ISTRUZIONI IMPORTANTI:
             }
             
             # Stream con requests
-            with requests.post(stream_url, headers=get_headers(), json=payload, stream=True, timeout=60) as response:
+            with http_session.post(stream_url, headers=get_headers(), json=payload, stream=True, timeout=60) as response:
                 response.raise_for_status()
                 gemini_circuit_breaker.record_success()
                 
@@ -954,7 +1067,7 @@ def get_document_chunks(document_name):
         logger.info(f"Query chunks su documento: {document_name}")
         logger.info(f"Query: '{query_string}', Max results: {results_count}")
         
-        response = requests.post(url, headers=headers, json=payload)
+        response = http_session.post(url, headers=headers, json=payload)
         response.raise_for_status()
         
         response_data = response.json()
@@ -1035,3 +1148,4 @@ if __name__ == '__main__':
         logger.error(f"Errore di configurazione: {str(e)}")
         print(f"\n❌ ERRORE: {str(e)}")
         print("Assicurati di aver configurato correttamente il file .env")
+

@@ -4,6 +4,9 @@ REM Script di Installazione Automatica
 REM Google File Search Application
 REM ========================================
 
+REM Vai alla root del progetto (cartella padre di setup/)
+cd /d "%~dp0.."
+
 echo.
 echo ====================================
 echo  INSTALLAZIONE GOOGLE FILE SEARCH

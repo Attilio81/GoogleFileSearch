@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(dir:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(NUL)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

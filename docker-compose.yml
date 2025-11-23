@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Backend Flask
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: googlefilesearch-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Variabili d'ambiente - IMPORTANTE: configurare .env nella root del progetto
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - FILE_SEARCH_STORE_NAME=${FILE_SEARCH_STORE_NAME}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gemini-2.5-pro}
+      - CHUNK_SIZE=${CHUNK_SIZE:-800}
+      - CHUNK_OVERLAP_PERCENT=${CHUNK_OVERLAP_PERCENT:-10}
+      - RESULTS_COUNT=${RESULTS_COUNT:-25}
+      - MIN_RELEVANCE_SCORE=${MIN_RELEVANCE_SCORE:-0.3}
+      - MAX_CHUNKS_FOR_GENERATION=${MAX_CHUNKS_FOR_GENERATION:-15}
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Volume per uploads temporanei
+      - uploads_data:/app/uploads
+      # Volume per logs (opzionale)
+      - ./logs:/app/logs
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React con Nginx
+  frontend:
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile
+    container_name: googlefilesearch-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# Volumi persistenti
+volumes:
+  uploads_data:
+    driver: local
+
+# Network per la comunicazione tra servizi
+networks:
+  app-network:
+    driver: bridge

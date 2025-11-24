@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: google-rag-backend
+    restart: unless-stopped
+    ports:
+      - "7000:5000"
+    env_file:
+      - .env
+    volumes:
+      - ./documents_storage:/app/documents_storage
+    environment:
+      - FLASK_ENV=production
+      - DOCUMENTS_STORAGE=/app/documents_storage
+    networks:
+      - rag-network
+
+  frontend:
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile
+    container_name: google-rag-frontend
+    restart: unless-stopped
+    ports:
+      - "7001:80"
+    depends_on:
+      - backend
+    networks:
+      - rag-network
+
+networks:
+  rag-network:
+    driver: bridge

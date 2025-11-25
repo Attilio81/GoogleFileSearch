@@ -101,6 +101,8 @@ L'interfaccia è divisa in tre pagine principali accessibili dal menu laterale:
    - ✅ Stato: `ACTIVE` (pronto per la ricerca)
    - ❌ Stato: `FAILED` (errore nel caricamento)
 
+![Interfaccia di Upload](images/documents_upload.png)
+
 ### Formati Supportati
 
 ✅ **Documenti di Testo:**
@@ -218,6 +220,8 @@ La chat utilizza l'AI per:
 4. **Attendi la risposta**:
    - Vedrai tre puntini animati (⋯) mentre l'AI elabora
    - La risposta apparirà progressivamente (streaming)
+
+![Interfaccia Chat](images/chat_interface.png)
 
 ### Esempi di Domande Efficaci
 
